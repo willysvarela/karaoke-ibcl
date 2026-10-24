@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Louvor Karaokê IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Gochi+Hand&family=Nunito:wght@500;700;900&display=swap">
+<style>
+/* Layout: a scrapbook page. Cream paper, marker-ink colors, sticker cards with hard offset shadows and washi tape; one screen at a time (home → palco → placar). Single light look by design. */
+:root{
+  --paper:#fff8ea; --paper2:#fff1d6; --ink:#2b2340; --ink2:#5a4f78; --muted:#8a7fa8;
+  --pink:#ff6fae; --yellow:#ffd23f; --mint:#5be3b0; --sky:#5ec8ff; --lilac:#b08cff; --orange:#ff9b54;
+  --good:#2ec489; --bad:#ff5d7a;
+  --display:"Fredoka", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  --hand:"Gochi Hand", "Comic Sans MS", cursive;
+  --body:"Nunito", "Segoe UI", Roboto, sans-serif;
+  --r:20px; --bw:3px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{
+  margin:0;font-family:var(--body);color:var(--ink);background:var(--paper);line-height:1.45;overflow-x:hidden;
+  background-image:
+    radial-gradient(rgba(43,35,64,.07) 1px, transparent 1.4px),
+    linear-gradient(transparent 31px, rgba(94,200,255,.16) 32px);
+  background-size:22px 22px, 100% 32px;
+}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input{font:inherit;color:inherit}
+h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--display);line-height:1.05;font-weight:700}
+:focus-visible{outline:3px dashed var(--ink);outline-offset:3px;border-radius:8px}
+
+/* floating doodles behind everything */
+.doodles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.doodles span{position:absolute;font-family:var(--hand);font-size:36px;opacity:.5;animation:drift linear infinite}
+@keyframes drift{from{transform:translateY(110vh) rotate(-20deg)}to{transform:translateY(-20vh) rotate(25deg)}}
+
+.wrap{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding-block:22px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.screen{display:grid;gap:30px;animation:enter .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes enter{from{opacity:0;transform:translateY(24px) rotate(-.5deg)}to{opacity:1;transform:none}}
+
+/* sticker = white card with ink border + hard shadow */
+.sticker{background:#fff;border:var(--bw) solid var(--ink);border-radius:var(--r);box-shadow:6px 6px 0 var(--ink);position:relative}
+.tape{position:absolute;width:92px;height:26px;background:var(--yellow);opacity:.9;transform:rotate(-6deg);top:-14px;left:22px;border-left:2px dashed rgba(255,255,255,.7);border-right:2px dashed rgba(255,255,255,.7);box-shadow:0 2px 4px rgba(43,35,64,.15)}
+.tape.r{left:auto;right:22px;transform:rotate(7deg);background:var(--sky)}
+.tape.p{background:var(--pink)}.tape.m{background:var(--mint)}.tape.l{background:var(--lilac)}
+
+/* ---------- top bar ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.mic{width:50px;height:50px;border-radius:16px;background:var(--pink);border:var(--bw) solid var(--ink);box-shadow:4px 4px 0 var(--ink);display:grid;place-items:center;animation:bob 3s ease-in-out infinite}
+.mic svg{width:26px;height:26px}
+@keyframes bob{0%,100%{transform:rotate(-8deg)}50%{transform:translateY(-4px) rotate(8deg)}}
+.brand h1{font-size:clamp(24px,4.5vw,34px);letter-spacing:-.01em}
+.brand h1 span{display:inline-block;background:var(--yellow);padding:0 10px;border-radius:10px;border:var(--bw) solid var(--ink);transform:rotate(-2deg);box-shadow:3px 3px 0 var(--ink)}
+.ghost{padding:10px 16px;border-radius:999px;border:var(--bw) solid var(--ink);background:#fff;font-weight:900;font-size:14px;box-shadow:3px 3px 0 var(--ink);transition:transform .15s,box-shadow .15s}
+.ghost:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.ghost:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.cta{padding:12px 22px;border-radius:999px;font-weight:700;font-family:var(--display);font-size:16px;color:var(--ink);background:var(--yellow);border:var(--bw) solid var(--ink);box-shadow:4px 4px 0 var(--ink);transition:transform .15s,box-shadow .15s}
+.cta:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink)}
+.cta:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.cta.pink{background:var(--pink);color:#fff;text-shadow:1px 1px 0 var(--ink)}
+.cta.mint{background:var(--mint)}
+
+/* ---------- hero / search ---------- */
+.hero{display:grid;gap:18px;text-align:center;padding-block:14px 4px}
+.hero h2{font-size:clamp(34px,7vw,66px);letter-spacing:-.02em}
+.hero h2 .w{display:inline-block;animation:drop .7s cubic-bezier(.2,.9,.2,1.2) both}
+.hero h2 .w:nth-child(2){color:var(--pink)}.hero h2 .w:nth-child(4){color:var(--sky)}.hero h2 .w:nth-child(5){color:var(--orange)}
+@keyframes drop{from{opacity:0;transform:translateY(-40px) rotate(-8deg)}to{opacity:1;transform:none}}
+.hero p{color:var(--ink2);max-width:58ch;margin:0 auto;font-size:17px;font-weight:700;font-family:var(--hand);font-size:22px;line-height:1.3}
+
+.search{display:flex;gap:10px;max-width:720px;width:100%;margin:0 auto;background:#fff;border:var(--bw) solid var(--ink);border-radius:999px;padding:8px 8px 8px 20px;box-shadow:6px 6px 0 var(--ink);transition:box-shadow .2s,transform .2s}
+.search:focus-within{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--pink)}
+.search input{flex:1;min-width:0;background:none;border:0;outline:0;font-size:17px;padding:8px 0;font-weight:700}
+.search input::placeholder{color:var(--muted);font-weight:500}
+
+.chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.chip{padding:8px 14px;border-radius:999px;border:2px solid var(--ink);background:#fff;font-size:14px;font-weight:900;box-shadow:2px 2px 0 var(--ink);transition:all .15s;animation:enter .5s both}
+.chip:nth-child(5n+1){background:#fff0f7}.chip:nth-child(5n+2){background:#fff9dd}.chip:nth-child(5n+3){background:#e8fff5}.chip:nth-child(5n+4){background:#e9f7ff}.chip:nth-child(5n+5){background:#f1eaff}
+.chip:hover{transform:translate(-1px,-2px) rotate(-2deg);box-shadow:3px 4px 0 var(--ink)}
+
+.note{text-align:center;color:var(--ink2);font-size:15px;font-weight:700}
+.note b{background:var(--mint);padding:0 6px;border-radius:6px}
+
+/* ---------- results ---------- */
+.results{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:22px 18px;padding-top:12px}
+.card{text-align:left;display:grid;gap:10px;padding:10px;background:#fff;border:var(--bw) solid var(--ink);border-radius:var(--r);box-shadow:5px 5px 0 var(--ink);position:relative;animation:pop .55s cubic-bezier(.2,.9,.2,1.1) both;transition:transform .2s,box-shadow .2s}
+.card:nth-child(odd){transform:rotate(-1deg)}.card:nth-child(even){transform:rotate(1deg)}
+.card:hover{transform:translate(-2px,-6px) rotate(0);box-shadow:8px 10px 0 var(--pink)}
+.card .tape{width:70px;height:20px;top:-10px;left:50%;margin-left:-35px;transform:rotate(-3deg)}
+.card:nth-child(3n+1) .tape{background:var(--pink)}.card:nth-child(3n+2) .tape{background:var(--sky)}.card:nth-child(3n+3) .tape{background:var(--mint)}
+@keyframes pop{from{opacity:0;transform:translateY(30px) scale(.9)}to{opacity:1}}
+.thumb{aspect-ratio:16/9;width:100%;max-width:100%;border-radius:12px;background:var(--paper2);object-fit:cover;display:block;border:2px solid var(--ink)}
+.thumb.fake{display:grid;place-items:center;font-family:var(--display);font-size:38px;color:#fff;text-shadow:2px 2px 0 var(--ink)}
+.card .t{font-weight:900;font-size:15px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .c{font-size:13px;color:var(--muted);font-weight:700}
+.card .play{position:absolute;top:18px;right:18px;width:40px;height:40px;border-radius:50%;background:var(--yellow);border:2px solid var(--ink);display:grid;place-items:center;opacity:0;transform:scale(.6);transition:all .2s;box-shadow:2px 2px 0 var(--ink)}
+.card:hover .play{opacity:1;transform:scale(1)}
+.card .ext{font-size:13px;color:var(--ink);font-family:var(--hand);text-decoration:underline wavy var(--sky);justify-self:start}
+.skel{height:210px;border-radius:var(--r);border:var(--bw) dashed var(--muted);background:repeating-linear-gradient(-45deg,#fff 0 12px,var(--paper2) 12px 24px);background-size:200% 100%;animation:shimmer 1.2s linear infinite}
+@keyframes shimmer{to{background-position:-34px 0}}
+
+.sec-title{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sec-title h3{font-size:22px;background:var(--lilac);color:#fff;padding:2px 12px;border-radius:10px;border:var(--bw) solid var(--ink);transform:rotate(-1.5deg);text-shadow:1px 1px 0 var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.sec-title h3.m{background:var(--mint);color:var(--ink);text-shadow:none}
+.sec-title small{color:var(--muted);font-size:14px;font-weight:700;font-family:var(--hand);font-size:17px}
+
+/* ---------- leaderboard ---------- */
+.board{display:grid;gap:10px;margin-top:16px}
+.row{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border-radius:14px;background:#fff;border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);animation:enter .5s both}
+.row:first-child{background:#fff9dd;transform:rotate(-.6deg)}
+.row .n{font-family:var(--display);font-size:18px;width:36px;height:36px;border-radius:50%;background:var(--sky);border:2px solid var(--ink);display:grid;place-items:center}
+.row:first-child .n{background:var(--yellow)}
+.row .who{min-width:0}.row .who b{display:block;font-weight:900}.row .who span{color:var(--muted);font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.row .pts{font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums;color:var(--pink)}
+.empty{color:var(--ink2);text-align:center;padding:18px;border:var(--bw) dashed var(--muted);border-radius:14px;font-family:var(--hand);font-size:19px;background:rgba(255,255,255,.5)}
+
+/* ---------- modal ---------- */
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(43,35,64,.45);backdrop-filter:blur(4px);animation:fade .25s both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.dialog{width:min(520px,100%);background:#fff;border:var(--bw) solid var(--ink);border-radius:26px;padding:30px 26px 26px;display:grid;gap:16px;animation:pop .45s cubic-bezier(.2,.9,.2,1.15) both;box-shadow:10px 10px 0 var(--ink);position:relative;transform:rotate(-.6deg)}
+.dialog h3{font-size:26px}
+.dialog p{margin:0;color:var(--ink2);font-size:15px;font-weight:700}
+.field{display:grid;gap:6px}
+.field label{font-size:13px;font-weight:900;color:var(--ink2);letter-spacing:.06em;text-transform:uppercase}
+.field input{padding:14px 16px;border-radius:14px;border:var(--bw) solid var(--ink);background:var(--paper);outline:0;font-size:17px;font-weight:700}
+.field input:focus{box-shadow:3px 3px 0 var(--sky)}
+.actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.song-pill{display:flex;gap:10px;align-items:center;padding:10px;border-radius:14px;background:var(--paper2);border:2px dashed var(--ink)}
+.song-pill img,.song-pill .thumb.fake{width:88px;height:50px;border-radius:8px;object-fit:cover;font-size:18px;border:2px solid var(--ink)}
+.song-pill div{min-width:0;font-size:14px}
+.song-pill b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:900}
+
+/* ---------- stage ---------- */
+.stage{display:grid;gap:20px}
+.stage-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.live{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:var(--bad);color:#fff;font-weight:900;font-size:13px;letter-spacing:.14em;border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);transform:rotate(2deg)}
+.live i{width:9px;height:9px;border-radius:50%;background:#fff;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+.singer{font-family:var(--display);font-size:clamp(20px,3.5vw,28px)}
+.singer small{display:block;font-family:var(--hand);color:var(--ink2);font-size:17px}
+
+.frame{position:relative;border-radius:24px;padding:12px;background:#fff;border:var(--bw) solid var(--ink);box-shadow:8px 8px 0 var(--ink)}
+.frame .tape{top:-16px;left:30px}.frame .tape.r{top:auto;bottom:-14px;left:auto;right:30px}
+.frame .inner{position:relative;border-radius:14px;overflow:hidden;background:var(--ink);aspect-ratio:16/9;max-width:100%;border:2px solid var(--ink)}
+.frame iframe,.frame #yt{position:absolute;inset:0;width:100%;height:100%;border:0}
+.curtain{position:absolute;inset:0;z-index:5;pointer-events:none;display:flex}
+.curtain b{flex:1;background:repeating-linear-gradient(90deg,var(--pink) 0 22px,#ff8ec0 22px 44px);border-right:3px solid var(--ink);transition:transform 1.4s cubic-bezier(.7,0,.3,1)}
+.curtain b:last-child{border-right:0;border-left:3px solid var(--ink)}
+.curtain.open b:first-child{transform:translateX(-102%)}
+.curtain.open b:last-child{transform:translateX(102%)}
+.count{position:absolute;inset:0;z-index:6;display:grid;place-items:center;font-family:var(--display);font-size:clamp(100px,26vw,230px);color:var(--yellow);-webkit-text-stroke:4px var(--ink);pointer-events:none}
+.count span{animation:tick 1s cubic-bezier(.2,.9,.2,1) both;display:inline-block}
+@keyframes tick{0%{opacity:0;transform:scale(2.4) rotate(-15deg)}30%{opacity:1;transform:scale(1) rotate(0)}80%{opacity:1}100%{opacity:0;transform:scale(.6)}}
+
+.demo-stage{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;background:repeating-linear-gradient(135deg,#fff 0 18px,var(--paper2) 18px 36px)}
+.demo-stage h3{font-size:clamp(24px,5vw,44px);color:var(--pink);-webkit-text-stroke:1.5px var(--ink)}
+.demo-stage p{color:var(--ink2);margin:6px 0 0;font-family:var(--hand);font-size:19px}
+.demo-stage .halo{position:absolute;width:55%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(255,210,63,.6),transparent 65%);animation:breathe 2.2s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.25);opacity:.6}}
+
+.eq{display:flex;gap:5px;align-items:flex-end;height:50px;justify-content:center}
+.eq b{width:9px;border-radius:5px 5px 2px 2px;border:2px solid var(--ink);animation:eq .9s ease-in-out infinite alternate;transform-origin:bottom}
+.eq b:nth-child(5n+1){background:var(--pink)}.eq b:nth-child(5n+2){background:var(--yellow)}.eq b:nth-child(5n+3){background:var(--mint)}.eq b:nth-child(5n+4){background:var(--sky)}.eq b:nth-child(5n+5){background:var(--lilac)}
+@keyframes eq{from{transform:scaleY(.15)}to{transform:scaleY(1)}}
+.eq.paused b{animation-play-state:paused;transform:scaleY(.1)}
+
+.progress{position:relative;height:16px;border-radius:999px;background:#fff;border:2px solid var(--ink);overflow:hidden}
+.progress i{position:absolute;inset:0;width:0%;background:repeating-linear-gradient(-45deg,var(--sky) 0 10px,var(--mint) 10px 20px);transition:width .5s linear}
+.times{display:flex;justify-content:space-between;color:var(--ink2);font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;margin-top:6px}
+.stage-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* ---------- suspense + score ---------- */
+.suspense{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:var(--ink);animation:fade .5s both;text-align:center;padding:16px;background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1.5px);background-size:22px 22px}
+.suspense .calc{color:var(--yellow);font-family:var(--hand);font-size:clamp(20px,4vw,30px);letter-spacing:.08em}
+.suspense .calc::after{content:"";display:inline-block;width:1.2em;text-align:left;animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.slot{font-family:var(--display);font-weight:700;font-size:clamp(130px,34vw,320px);line-height:1;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.04em;-webkit-text-stroke:4px var(--pink)}
+.slot.shake{animation:shake .08s infinite}
+@keyframes shake{25%{transform:translate(2px,-1px) rotate(-1deg)}75%{transform:translate(-2px,1px) rotate(1deg)}}
+.checks{display:grid;gap:6px;margin-top:20px;color:var(--sky);font-size:15px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;min-height:3.2em}
+.checks div{opacity:0;animation:enter .4s both}
+.flash{position:fixed;inset:0;z-index:70;background:var(--yellow);pointer-events:none;opacity:0}
+.flash.go{animation:flash .7s ease-out both}
+@keyframes flash{0%{opacity:1}100%{opacity:0}}
+
+.score{text-align:center;display:grid;gap:22px;justify-items:center}
+.score .label{font-size:14px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink2);font-weight:900}
+.big{font-family:var(--display);font-weight:700;font-size:clamp(120px,32vw,280px);line-height:.9;letter-spacing:-.05em;color:var(--pink);-webkit-text-stroke:5px var(--ink);text-shadow:10px 10px 0 var(--yellow),12px 12px 0 var(--ink);animation:slam .8s cubic-bezier(.2,1.1,.3,1) both;font-variant-numeric:tabular-nums}
+@keyframes slam{0%{opacity:0;transform:scale(3.4) rotate(-20deg)}60%{opacity:1;transform:scale(.92) rotate(2deg)}100%{transform:scale(1)}}
+.rank{font-family:var(--display);font-size:clamp(24px,5vw,40px);background:var(--mint);border:var(--bw) solid var(--ink);padding:8px 22px;border-radius:16px;box-shadow:5px 5px 0 var(--ink);transform:rotate(-1.5deg);animation:enter .6s .35s both}
+.rank small{display:block;font-family:var(--hand);color:var(--ink2);font-size:18px;font-weight:400;margin-top:4px}
+.stars{display:flex;gap:8px}
+.stars svg{width:clamp(34px,8vw,54px);height:auto;fill:#fff;stroke:var(--ink);stroke-width:1.6;transform:scale(0);animation:star .5s cubic-bezier(.2,1.4,.3,1) both}
+.stars svg.on{fill:var(--yellow)}
+@keyframes star{to{transform:scale(1)}}
+.break{display:grid;gap:14px;width:min(520px,100%);text-align:left;padding:22px;transform:rotate(.6deg)}
+.bar{display:grid;grid-template-columns:100px 1fr 44px;gap:12px;align-items:center;font-size:15px;font-weight:900}
+.bar .tr{height:16px;border-radius:999px;background:var(--paper2);border:2px solid var(--ink);overflow:hidden}
+.bar .tr i{display:block;height:100%;width:0;border-radius:999px;transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+.bar:nth-of-type(1) .tr i{background:var(--pink)}.bar:nth-of-type(2) .tr i{background:var(--sky)}.bar:nth-of-type(3) .tr i{background:var(--orange)}.bar:nth-of-type(4) .tr i{background:var(--lilac)}
+.bar .v{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--display);font-size:16px}
+.score-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;animation:enter .6s 1.4s both}
+#confetti{position:fixed;inset:0;z-index:55;pointer-events:none}
+
+/* ---------- live voice panel (AI version) ---------- */
+.voice{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:stretch;padding:14px;transform:rotate(-.4deg)}
+.voice .now{display:grid;align-content:center;justify-items:center;min-width:118px;padding:8px 10px;border-radius:14px;background:var(--paper2);border:2px dashed var(--ink)}
+.voice .now b{font-family:var(--display);font-size:clamp(26px,5vw,38px);line-height:1;font-variant-numeric:tabular-nums}
+.voice .now span{font-size:13px;font-weight:900;color:var(--ink2);font-variant-numeric:tabular-nums;min-height:1.3em}
+.voice .now .ok{color:var(--good)}.voice .now .meh{color:var(--orange)}.voice .now .off{color:var(--bad)}
+.voice canvas{width:100%;height:120px;border-radius:12px;background:#fff;border:2px solid var(--ink);display:block;min-width:0}
+.voice .mstat{grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:900;color:var(--ink2)}
+.voice .mstat i{font-style:normal;padding:1px 8px;border-radius:999px;border:2px solid var(--ink);background:var(--mint)}
+.voice .mstat i.warn{background:var(--yellow)}.voice .mstat i.err{background:var(--bad);color:#fff}
+.eq.mic-live b{height:100%;animation:none;transition:transform .08s linear}
+@media (max-width:520px){ .voice{grid-template-columns:1fr} .voice .now{grid-auto-flow:column;gap:12px;justify-content:start} }
+
+.laudo{display:grid;gap:10px;width:min(520px,100%);text-align:left;padding:20px 22px;transform:rotate(-.5deg)}
+.laudo h4{margin:0;font-family:var(--display);font-size:18px}
+.laudo .who{display:inline-block;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;padding:2px 10px;border-radius:999px;border:2px solid var(--ink);background:var(--sky);margin-left:6px;vertical-align:middle}
+.laudo dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px 14px;margin:0}
+.laudo dt{font-size:12px;font-weight:900;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.laudo dd{margin:0;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.laudo .tip{margin:0;padding:10px 12px;border-radius:12px;background:var(--paper2);border:2px dashed var(--ink);font-weight:800;color:var(--ink2)}
+.laudo .tip:empty{display:none}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);z-index:80;padding:12px 18px;border-radius:16px;background:#fff;border:var(--bw) solid var(--ink);box-shadow:4px 4px 0 var(--ink);font-weight:800;opacity:0;transition:all .3s;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .doodles,.eq{display:none}
+}
+</style>
+</head>
+<body>
+<div class="doodles" id="doodles" aria-hidden="true"></div>
+<div class="flash" id="flash" aria-hidden="true"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="wrap">
+
+<!-- ============ HOME ============ -->
+<section class="screen" id="s-home">
+  <header class="top">
+    <div class="brand">
+      <div class="mic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#2b2340"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 1 0-8 0v5a4 4 0 0 0 4 4Zm6-4a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93V22h2v-3.07A8 8 0 0 0 20 11h-2Z"/></svg></div>
+      <h1>Louvor <span>Karaokê</span></h1>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="ghost" id="btn-ai" type="button">Júri IA</button>
+      <button class="ghost" id="btn-key" type="button">Chave do YouTube</button>
+    </div>
+  </header>
+
+  <div class="hero">
+    <h2 id="hero-title"></h2>
+    <p>Busca o playback, chama quem vai cantar e o júri escuta pelo microfone: afinação, estabilidade, energia e presença medidas de verdade. Use fone de ouvido!</p>
+    <form class="search" id="form" autocomplete="off">
+      <input id="q" type="search" placeholder="Música, artista ou link do YouTube…" aria-label="Buscar música">
+      <button class="cta" type="submit">Buscar</button>
+    </form>
+    <div class="chips" id="chips"></div>
+    <p class="note" id="mode-note"></p>
+  </div>
+
+  <div id="results-wrap" hidden>
+    <div class="sec-title"><h3>Resultados</h3><small id="results-sub"></small></div>
+    <div class="results" id="results"></div>
+  </div>
+
+  <div>
+    <div class="sec-title"><h3 class="m">Placar da noite</h3><small>top 5 · salvo neste navegador</small></div>
+    <div class="board" id="board"></div>
+  </div>
+</section>
+
+<!-- ============ PALCO ============ -->
+<section class="screen stage" id="s-stage" hidden>
+  <div class="stage-head">
+    <div class="singer" id="stage-singer"></div>
+    <span class="live"><i></i>AO VIVO</span>
+  </div>
+  <div class="frame">
+    <span class="tape p"></span><span class="tape r"></span>
+    <div class="inner">
+      <div id="yt"></div>
+      <div class="demo-stage" id="demo-stage" hidden><div class="halo"></div><div><h3 id="demo-title"></h3><p id="demo-sub">modo demo · cante como se o vídeo estivesse aqui</p></div></div>
+      <div class="curtain" id="curtain"><b></b><b></b></div>
+      <div class="count" id="count" hidden></div>
+    </div>
+  </div>
+  <div class="voice sticker" id="voice">
+    <div class="now"><b id="v-note">–</b><span id="v-cents">aguardando voz</span></div>
+    <canvas id="v-trace" aria-label="Traço da sua afinação ao vivo"></canvas>
+    <div class="mstat"><span>Microfone: <i id="v-mic" class="warn">desligado</i></span><span id="v-sung">cantando: 0s</span></div>
+  </div>
+  <div class="eq paused" id="eq" aria-hidden="true"></div>
+  <div>
+    <div class="progress"><i id="prog"></i></div>
+    <div class="times"><span id="t-cur">0:00</span><span id="t-dur">–:––</span></div>
+  </div>
+  <div class="stage-actions">
+    <button class="ghost" id="btn-back" type="button">← Desistir</button>
+    <button class="cta pink" id="btn-finish" type="button">Encerrar e pontuar</button>
+  </div>
+</section>
+
+<!-- ============ PLACAR ============ -->
+<section class="screen score" id="s-score" hidden>
+  <div class="label">Pontuação final</div>
+  <div class="big" id="big">0</div>
+  <div class="stars" id="stars"></div>
+  <div class="rank" id="rank"></div>
+  <div class="break sticker" id="break"></div>
+  <div class="laudo sticker" id="laudo" hidden></div>
+  <div class="score-actions">
+    <button class="cta" id="btn-again" type="button">Cantar de novo</button>
+    <button class="ghost" id="btn-new" type="button">Nova música</button>
+  </div>
+</section>
+
+</div>
+
+<div id="modal-mount"></div>
+
+<script>
+/* ===================== state ===================== */
+const $ = s => document.querySelector(s);
+const state = { key: null, results: [], current: null, singer: '', player: null, ytReady: false, timer: null, demoTimer: null, scoring: false, duration: 0 };
+try { state.key = localStorage.getItem('kg_key') || null; } catch {}
+try { state.aiKey = localStorage.getItem('kg_ai_key') || null; } catch {}
+
+const SUGGEST = ['Fernandinho','Gabriela Rocha','Aline Barros','Isadora Pompeo','Thalles Roberto','Ana Nóbrega','Diante do Trono','Morada','Casa Worship','Eli Soares'];
+const DEMO = [
+  ['Uma Nova História','Fernandinho'],['Lugar Secreto','Gabriela Rocha'],['Ressuscita-me','Aline Barros'],
+  ['Deus Cuida de Mim','Kleber Lucas'],['Me Atraiu','Gabriela Rocha'],['Casa do Pai','Isadora Pompeo'],
+  ['Oceanos','Ana Nóbrega'],['Aquieta Minh’alma','Ministério Zoe'],['Preciso de Ti','Diante do Trono'],
+  ['Deus é Deus','Delino Marçal'],['Ninguém Explica Deus','Preto no Branco'],['Deus da Minha Vida','Thalles Roberto'],
+  ['Caia Fogo','Fernandinho'],['Lindo És','Juliano Son'],['Teu Santo Nome','Gabriela Rocha'],['Nada Além do Sangue','Fernandinho']
+];
+const FILLS = ['#ff6fae','#5ec8ff','#ffd23f','#b08cff','#5be3b0','#ff9b54'];
+
+/* ===================== helpers ===================== */
+function toast(msg, ms){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'), ms||3400); }
+function show(id){ document.querySelectorAll('.screen').forEach(s=>{ s.hidden = s.id!==id; }); window.scrollTo({top:0,behavior:'smooth'}); }
+function fmt(s){ s=Math.max(0,Math.floor(s||0)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// A bare 11-char string only counts as a video id if it has a digit, '-' or '_' ("Fernandinho" is 11 letters).
+function parseYT(str){ const m = str.match(/(?:youtu\.be\/|v=|\/shorts\/|\/embed\/)([\w-]{11})/) || str.match(/^(?=[\w-]*[\d_-])([\w-]{11})$/); return m ? m[1] : null; }
+function initials(t){ return t.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+
+/* ===================== home ===================== */
+(function boot(){
+  const words = 'Hoje tem louvor no palco!'.split(' ');
+  $('#hero-title').innerHTML = words.map((w,i)=>`<span class="w" style="animation-delay:${.15+i*.09}s">${w}</span>`).join(' ');
+  $('#chips').innerHTML = SUGGEST.map((s,i)=>`<button class="chip" type="button" style="animation-delay:${.5+i*.05}s" data-q="${esc(s)}">${esc(s)}</button>`).join('');
+  $('#chips').addEventListener('click',e=>{ const b=e.target.closest('.chip'); if(!b) return; $('#q').value=b.dataset.q; search(b.dataset.q); });
+  $('#eq').innerHTML = Array.from({length:24},(_,i)=>`<b style="animation-delay:${-(i*73)%900}ms;animation-duration:${600+(i*137)%500}ms"></b>`).join('');
+  const glyphs=['♪','♫','★','♥','✿','♬','☆','✦'];
+  $('#doodles').innerHTML = Array.from({length:14},(_,i)=>`<span style="left:${(i*7.3)%100}%;color:${FILLS[i%FILLS.length]};font-size:${24+(i*11)%30}px;animation-duration:${18+(i*5)%14}s;animation-delay:-${(i*3.7)%20}s">${glyphs[i%glyphs.length]}</span>`).join('');
+  updateModeNote(); renderBoard();
+})();
+
+function updateModeNote(){
+  $('#mode-note').innerHTML = state.key
+    ? 'Busca ao vivo no YouTube ativada ✔ Também aceita link direto de vídeo.'
+    : '<b>Modo demo:</b> resultados simulados. Adicione uma chave da API do YouTube (grátis) para buscar de verdade, ou cole um link de vídeo.';
+}
+
+$('#form').addEventListener('submit',e=>{ e.preventDefault(); const q=$('#q').value.trim(); if(q) search(q); });
+$('#btn-key').addEventListener('click',openKeyModal);
+$('#btn-ai').addEventListener('click',openAiModal);
+
+async function search(q){
+  const id = parseYT(q);
+  if(id){ openSingerModal({ id, title:'Vídeo do YouTube', channel:'Link colado', thumb:`https://i.ytimg.com/vi/${id}/mqdefault.jpg`, demo:false }); return; }
+  const wrap=$('#results-wrap'), grid=$('#results'); wrap.hidden=false;
+  grid.innerHTML = Array.from({length:8},()=>'<div class="skel"></div>').join('');
+  $('#results-sub').textContent = `“${q}”`;
+  wrap.scrollIntoView({behavior:'smooth',block:'start'});
+  try{
+    state.results = state.key ? await ytSearch(q) : await demoSearch(q);
+  }catch(err){
+    console.error('[busca]', err);
+    grid.innerHTML=''; wrap.hidden=true;
+    toast(explainError(err), 7000);
+    return;
+  }
+  if(!state.results.length){ grid.innerHTML='<div class="empty">Nada encontrado. Tenta outro nome!</div>'; return; }
+  grid.innerHTML = state.results.map((r,i)=>`
+    <button class="card" type="button" data-i="${i}" style="animation-delay:${i*.06}s">
+      <span class="tape" aria-hidden="true"></span>
+      ${r.thumb ? `<img class="thumb" src="${esc(r.thumb)}" alt="" loading="lazy">` : `<div class="thumb fake" style="background:${FILLS[i%FILLS.length]}">${esc(initials(r.title))}</div>`}
+      <span class="play" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="#2b2340"><path d="M8 5v14l11-7z"/></svg></span>
+      <span class="t">${esc(r.title)}</span>
+      <span class="c">${esc(r.channel)}</span>
+      ${r.demo ? `<a class="ext" href="https://www.youtube.com/results?search_query=${encodeURIComponent(r.title+' '+r.channel+' karaokê')}" target="_blank" rel="noopener" onclick="event.stopPropagation()">procurar o playback real ↗</a>` : ''}
+    </button>`).join('');
+  $('#results-sub').textContent = state.key ? `“${q}” · YouTube` : `“${q}” · demo (simulado)`;
+}
+$('#results').addEventListener('click',e=>{ const c=e.target.closest('.card'); if(!c) return; openSingerModal(state.results[+c.dataset.i]); });
+
+function explainError(err){
+  if(err.status===403) return 'A chave não tem permissão (403). No Google Cloud, ative a "YouTube Data API v3" e confira as restrições da chave. ' + (err.detail||'');
+  if(err.status===400) return 'Chave inválida (400). Confira se copiou a chave inteira. ' + (err.detail||'');
+  if(err.status===429) return 'Cota diária da API esgotada. Tenta amanhã ou usa outra chave.';
+  if(err.name==='TypeError') return 'O navegador bloqueou a chamada ao YouTube. Se você está vendo isto dentro do Claude, baixe o index.html e abra no seu navegador — ali a busca funciona. Se já abriu o arquivo, remova as restrições de "referenciador HTTP" da chave.';
+  return 'Não consegui buscar agora: ' + (err.message||'erro desconhecido');
+}
+
+async function ytSearch(q){
+  const u = new URL('https://www.googleapis.com/youtube/v3/search');
+  Object.entries({ part:'snippet', type:'video', videoEmbeddable:'true', maxResults:'12', relevanceLanguage:'pt', regionCode:'BR', q:`${q} karaokê gospel playback com letra`, key:state.key }).forEach(([k,v])=>u.searchParams.set(k,v));
+  const r = await fetch(u.toString(), { method:'GET' });
+  if(!r.ok){ let detail=''; try{ const j=await r.json(); detail = j.error?.message || ''; }catch{} const e=new Error('HTTP '+r.status); e.status=r.status; e.detail=detail; throw e; }
+  const j = await r.json();
+  return (j.items||[]).map(it=>({ id:it.id.videoId, title:it.snippet.title.replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&'), channel:it.snippet.channelTitle, thumb:it.snippet.thumbnails?.medium?.url, demo:false }));
+}
+function demoSearch(q){
+  return new Promise(res=>setTimeout(()=>{
+    const n = q.toLowerCase();
+    const hits = DEMO.filter(([t,a])=> (t+' '+a).toLowerCase().includes(n));
+    const list = (hits.length? hits : DEMO.slice().sort(()=>Math.random()-.5)).slice(0,8);
+    res(list.map(([t,a])=>({ id:null, title:`${t} · ${a} (Karaokê)`, channel:'demo · playback simulado', thumb:null, demo:true, song:t, artist:a })));
+  }, 700));
+}
+
+/* ===================== modals ===================== */
+function modal(html, tape){ const m=$('#modal-mount'); m.innerHTML=`<div class="modal" role="dialog" aria-modal="true"><div class="dialog"><span class="tape ${tape||'p'}" aria-hidden="true"></span>${html}</div></div>`; m.querySelector('.modal').addEventListener('click',e=>{ if(e.target.classList.contains('modal')) closeModal(); }); return m; }
+function closeModal(){ $('#modal-mount').innerHTML=''; }
+
+function openKeyModal(){
+  const m = modal(`
+    <h3>Chave da API do YouTube</h3>
+    <p>Crie uma chave gratuita no Google Cloud (YouTube Data API v3) e cole aqui. Fica salva só neste navegador. Sem chave, o app roda em modo demo.</p>
+    <div class="field"><label for="key">Chave</label><input id="key" type="text" placeholder="AIza…" value="${esc(state.key||'')}"></div>
+    <div class="actions"><button class="ghost" type="button" id="k-clear">Remover</button><button class="cta" type="button" id="k-save">Salvar</button></div>`, 'm');
+  m.querySelector('#key').focus();
+  m.querySelector('#k-save').onclick=()=>{ const v=m.querySelector('#key').value.trim(); state.key=v||null; try{ v?localStorage.setItem('kg_key',v):localStorage.removeItem('kg_key'); }catch{} updateModeNote(); closeModal(); toast(v?'Chave salva. Busca ao vivo ativada!':'Chave removida.'); };
+  m.querySelector('#k-clear').onclick=()=>{ m.querySelector('#key').value=''; };
+}
+
+function openAiModal(){
+  const m = modal(`
+    <h3>Júri IA (Claude)</h3>
+    <p>O microfone já mede afinação, estabilidade, energia e presença sem chave nenhuma. Com uma chave da API da Anthropic, o Claude lê essas medições e escreve o veredito e uma dica de canto. A chave fica salva só neste navegador: use apenas em máquina sua, rodando local.</p>
+    <div class="field"><label for="aikey">Chave da Anthropic</label><input id="aikey" type="password" placeholder="sk-ant-…" value="${esc(state.aiKey||'')}"></div>
+    <div class="actions"><button class="ghost" type="button" id="a-clear">Remover</button><button class="cta" type="button" id="a-save">Salvar</button></div>`, 'l');
+  m.querySelector('#aikey').focus();
+  m.querySelector('#a-save').onclick=()=>{ const v=m.querySelector('#aikey').value.trim(); state.aiKey=v||null; try{ v?localStorage.setItem('kg_ai_key',v):localStorage.removeItem('kg_ai_key'); }catch{} closeModal(); toast(v?'Júri IA ativado!':'Júri IA desligado. A nota continua vindo do microfone.'); };
+  m.querySelector('#a-clear').onclick=()=>{ m.querySelector('#aikey').value=''; };
+}
+
+function openSingerModal(item){
+  const m = modal(`
+    <h3>Quem vai cantar?</h3>
+    <div class="song-pill">${item.thumb?`<img src="${esc(item.thumb)}" alt="">`:`<div class="thumb fake" style="background:${FILLS[3]}">${esc(initials(item.title))}</div>`}<div><b>${esc(item.title)}</b><span style="color:var(--muted)">${esc(item.channel)}</span></div></div>
+    <div class="field"><label for="singer">Nome no telão</label><input id="singer" type="text" maxlength="28" placeholder="Ex.: Tia Marta" value="${esc(state.singer)}"></div>
+    <div class="actions"><button class="ghost" type="button" id="s-cancel">Voltar</button><button class="cta pink" type="button" id="s-go">Subir no palco</button></div>`);
+  const inp=m.querySelector('#singer'); inp.focus();
+  const go=()=>{ state.singer = inp.value.trim() || 'Cantor(a) misterioso(a)'; closeModal(); startStage(item); };
+  m.querySelector('#s-go').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  m.querySelector('#s-cancel').onclick=closeModal;
+}
+
+/* ===================== stage ===================== */
+async function startStage(item){
+  state.current=item; state.scoring=false; state.duration=0; state.fallback=false; state.take=(state.take||0)+1;
+  ensureAudio();
+  show('s-stage');
+  const micOk = await startVoice();
+  if(!micOk) toast('Sem microfone: a nota vai sair do júri aleatório. Libere o microfone no navegador para a análise real.', 6500);
+  $('#stage-singer').innerHTML = `${esc(state.singer)}<small>${esc(item.title)}</small>`;
+  $('#prog').style.width='0%'; $('#t-cur').textContent='0:00'; $('#t-dur').textContent='–:––';
+  $('#eq').classList.add('paused');
+  const curtain=$('#curtain'); curtain.classList.remove('open');
+  $('#demo-stage').hidden = !item.demo;
+  if(item.demo){ $('#demo-title').textContent=item.song; $('#demo-sub').textContent='modo demo · cante como se o vídeo estivesse aqui'; }
+  destroyPlayer();
+  setTimeout(()=>curtain.classList.add('open'),300);
+  setTimeout(()=>countdown(()=> item.demo ? playDemo() : playYT(item.id)),900);
+}
+function countdown(done){
+  const c=$('#count'); c.hidden=false; let n=3;
+  VOICE.calibrating=true; VOICE.noise=[];
+  const step=()=>{ if(n===0){ c.hidden=true; c.innerHTML=''; beginRecording(); done(); return; } c.innerHTML=`<span>${n}</span>`; beep(n===1?880:660); n--; setTimeout(step,1000); };
+  step();
+}
+function playYT(id){
+  const boot=()=>{
+    state.player = new YT.Player('yt',{ videoId:id, playerVars:{ autoplay:1, rel:0, modestbranding:1, playsinline:1, controls:1 },
+      events:{
+        onReady:e=>{ e.target.playVideo(); state.duration=e.target.getDuration(); $('#t-dur').textContent=fmt(state.duration); tick(); },
+        onStateChange:e=>{ if(e.data===YT.PlayerState.PLAYING) $('#eq').classList.remove('paused'); else $('#eq').classList.add('paused'); if(e.data===YT.PlayerState.ENDED) finish(); },
+        onError:()=>fallbackStage(id)
+      }});
+    clearTimeout(state.bootTimer); state.bootTimer=setTimeout(()=>{ if(!state.duration) fallbackStage(id); },7000);
+  };
+  if(state.ytReady) boot();
+  else { window.onYouTubeIframeAPIReady=()=>{ state.ytReady=true; boot(); }; if(!document.getElementById('ytapi')){ const s=document.createElement('script'); s.id='ytapi'; s.src='https://www.youtube.com/iframe_api'; document.head.appendChild(s); } }
+}
+function fallbackStage(id){
+  if(state.fallback) return; state.fallback=true;
+  clearTimeout(state.bootTimer); destroyPlayer();
+  const ds=$('#demo-stage'); ds.hidden=false;
+  $('#demo-title').textContent='Abre o vídeo no YouTube';
+  $('#demo-sub').innerHTML=`Este ambiente não deixa o player tocar aqui dentro. Canta por lá e volta para a nota!<br><a class="cta pink" style="display:inline-block;margin-top:14px;text-decoration:none" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener">Abrir no YouTube ↗</a>`;
+  $('#eq').classList.remove('paused'); $('#t-dur').textContent='∞';
+  let t=0; clearInterval(state.demoTimer);
+  state.demoTimer=setInterval(()=>{ t+=.5; $('#t-cur').textContent=fmt(t); $('#prog').style.width=(Math.min(1,t/240)*100)+'%'; },500);
+  toast('Player bloqueado aqui. Abre no YouTube, canta e depois toca em “Encerrar e pontuar”.',6000);
+}
+function tick(){
+  clearInterval(state.timer);
+  state.timer=setInterval(()=>{ const p=state.player; if(!p||!p.getCurrentTime) return; const cur=p.getCurrentTime(), dur=p.getDuration()||state.duration; $('#t-cur').textContent=fmt(cur); if(dur){ $('#t-dur').textContent=fmt(dur); $('#prog').style.width=(cur/dur*100)+'%'; } },500);
+}
+function playDemo(){
+  const dur=45; state.duration=dur; $('#t-dur').textContent=fmt(dur); $('#eq').classList.remove('paused');
+  let t=0; clearInterval(state.demoTimer);
+  state.demoTimer=setInterval(()=>{ t+=.5; $('#t-cur').textContent=fmt(t); $('#prog').style.width=(t/dur*100)+'%'; if(t>=dur){ clearInterval(state.demoTimer); finish(); } },500);
+}
+function destroyPlayer(){ clearInterval(state.timer); clearInterval(state.demoTimer); clearTimeout(state.bootTimer); if(state.player&&state.player.destroy){ try{state.player.destroy();}catch{} } state.player=null; const y=document.createElement('div'); y.id='yt'; const old=$('#yt'); if(old) old.replaceWith(y); }
+function goHome(){ destroyPlayer(); stopVoice(); show('s-home'); }
+$('#btn-back').addEventListener('click',goHome);
+$('#btn-finish').addEventListener('click',finish);
+
+/* ===================== scoring ===================== */
+// Used only when there is no microphone: same random jury as the original version.
+function rollScore(){ const r=Math.random(); const s = r<.08 ? 55+Math.random()*15 : r<.72 ? 70+Math.random()*22 : 92+Math.random()*8.9; return Math.min(100,Math.round(s)); }
+function rankFor(s){
+  if(s>=97) return ['Lendário!', 'A igreja inteira ficou em pé. Voz de anjo.'];
+  if(s>=90) return ['Adorador raiz', 'Afinação cirúrgica. Pode gravar o CD.'];
+  if(s>=80) return ['Mandou muito bem', 'Levita oficial do ministério de louvor.'];
+  if(s>=70) return ['Quase no tom', 'Faltou ar no refrão, mas o coração estava lá.'];
+  return ['O importante é adorar', 'Deus olha o coração. O júri, nem tanto.'];
+}
+async function finish(){
+  if(state.scoring) return; state.scoring=true;
+  destroyPlayer(); $('#eq').classList.add('paused');
+  const take = stopVoice();
+  const result = take ? analyzeTake(take.frames, take.hopSec) : null;
+  const final = result ? result.final : rollScore();
+  const takeId = state.take;
+  // Fire the AI judge now so it runs during the drumroll; the score screen never waits on it.
+  const judgeP = result && state.aiKey ? aiJudge(result).catch(err=>{ console.warn('[júri IA]', err); return { error: err }; }) : null;
+  await suspense(final);
+  revealScore(final, result, !!judgeP);
+  if(judgeP) judgeP.then(j=>{ if(state.take===takeId) applyJudge(j); });
+}
+
+function suspense(final){
+  return new Promise(resolve=>{
+    const el=document.createElement('div'); el.className='suspense'; el.id='suspense';
+    el.innerHTML=`<div><div class="calc">o júri está decidindo</div><div class="slot" id="slot">00</div><div class="checks" id="checks"></div></div>`;
+    document.body.appendChild(el);
+    const slot=el.querySelector('#slot'), checks=el.querySelector('#checks');
+    const msgs=['Analisando afinação','Medindo estabilidade','Avaliando energia','Consultando o júri'];
+    msgs.forEach((m,i)=>setTimeout(()=>{ const d=document.createElement('div'); d.textContent=m; checks.appendChild(d); if(checks.children.length>2) checks.removeChild(checks.firstChild); },700+i*950));
+    const T0=performance.now(), DUR=5200, start=900;
+    drumroll(DUR-start+300);
+    let last=0; slot.classList.add('shake');
+    function frame(now){
+      const t=now-T0;
+      if(t<start){ slot.textContent='00'; requestAnimationFrame(frame); return; }
+      const p=Math.min(1,(t-start)/(DUR-start));
+      const e=p*p*p;
+      const interval=40+e*620;
+      if(now-last>interval){ last=now; const near=p>.78; const v = near ? Math.max(0,Math.min(100, final+Math.round((Math.random()-.5)*(1-p)*60))) : Math.floor(Math.random()*100); slot.textContent=String(v).padStart(2,'0'); slot.style.transform=`scale(${1+Math.random()*.06})`; }
+      if(p<1) requestAnimationFrame(frame);
+      else { slot.classList.remove('shake'); slot.textContent=String(final).padStart(2,'0'); slot.style.transform='scale(1.15)'; slot.style.color='var(--yellow)'; stopDrum();
+        setTimeout(()=>{ fanfare(final); const f=$('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); el.remove(); resolve(); },650); }
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+function revealScore(final, result, judging){
+  show('s-score');
+  const big=$('#big'); big.textContent=final; big.style.animation='none'; void big.offsetWidth; big.style.animation='';
+  const [title,sub]=rankFor(final); setRank(title, sub);
+  const n=Math.max(1,Math.round(final/20));
+  $('#stars').innerHTML=Array.from({length:5},(_,i)=>`<svg viewBox="0 0 24 24" class="${i<n?'on':''}" style="animation-delay:${.5+i*.14}s"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>`).join('');
+  const cats = result
+    ? [['Afinação',result.cats.afinacao],['Estabilidade',result.cats.estabilidade],['Energia',result.cats.energia],['Presença',result.cats.presenca]]
+    : [['Afinação',12],['Ritmo',10],['Energia',16],['Letra',9]].map(([c,spread])=>[c, Math.max(40,Math.min(100,final+Math.round((Math.random()-.5)*spread*2)))]);
+  $('#break').innerHTML=`<span class="tape l" aria-hidden="true"></span>`+cats.map(([c])=>`<div class="bar"><span>${c}</span><div class="tr"><i></i></div><span class="v">0</span></div>`).join('');
+  setTimeout(()=>{ document.querySelectorAll('#break .bar').forEach((b,i)=>{ const v=cats[i][1]; b.querySelector('i').style.width=v+'%'; animateNum(b.querySelector('.v'),v,1100); }); },900);
+  renderLaudo(result, judging);
+  if(result && result.warnings.length) toast(result.warnings[0], 6500);
+  confetti(final>=90?280:final>=75?170:90);
+  saveScore(final);
+}
+function setRank(title, sub){ $('#rank').innerHTML=`${esc(title)}<small>${esc(state.singer)} · ${esc(sub)}</small>`; }
+function renderLaudo(r, judging){
+  const el=$('#laudo');
+  if(!r){ el.hidden=false; el.innerHTML=`<span class="tape p" aria-hidden="true"></span><h4>Sem análise de voz <span class="who">aleatório</span></h4><p class="tip">O microfone não estava liberado, então esta nota é sorteio, igual à versão original.</p>`; return; }
+  const s=r.stats;
+  el.hidden=false;
+  el.innerHTML=`<span class="tape p" aria-hidden="true"></span>
+    <h4>Laudo do júri <span class="who" id="l-who">${judging?'Claude escrevendo…':'algoritmo'}</span></h4>
+    <dl>
+      <div><dt>Tom detectado</dt><dd>${esc(s.key||'–')}</dd></div>
+      <div><dt>Extensão</dt><dd>${s.low&&s.high?esc(s.low+' → '+s.high):'–'}</dd></div>
+      <div><dt>Desvio médio</dt><dd>${s.meanAbsCents!=null?s.meanAbsCents+'¢':'–'}</dd></div>
+      <div><dt>Tempo cantando</dt><dd>${s.voicedSec}s</dd></div>
+      <div><dt>Notas sustentadas</dt><dd>${s.noteCount}</dd></div>
+      <div><dt>Fora do tom</dt><dd>${s.offScalePct!=null?s.offScalePct+'%':'–'}</dd></div>
+    </dl>
+    <p class="tip" id="l-tip"></p>`;
+}
+function applyJudge(j){
+  const who=$('#l-who');
+  if(!j || j.error){ if(who) who.textContent='algoritmo'; if(j&&j.error) toast('O júri IA não respondeu ('+(j.error.status||j.error.message||'erro')+'). Valeu a nota do algoritmo.', 6000); return; }
+  setRank(j.titulo, j.comentario);
+  if(who) who.textContent='Claude';
+  const tip=$('#l-tip'); if(tip) tip.textContent='Dica: '+j.dica;
+}
+function animateNum(el,to,ms){ const t0=performance.now(); (function f(now){ const p=Math.min(1,(now-t0)/ms); el.textContent=Math.round(to*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(f); })(t0); }
+$('#btn-again').addEventListener('click',()=> openSingerModal(state.current));
+$('#btn-new').addEventListener('click',()=>{ goHome(); $('#q').focus(); });
+
+/* ===================== leaderboard ===================== */
+function loadBoard(){ try{ return JSON.parse(localStorage.getItem('kg_scores')||'[]'); }catch{ return []; } }
+function saveScore(score){ const b=loadBoard(); b.push({ name:state.singer, song:state.current.title, score, at:Date.now() }); b.sort((a,c)=>c.score-a.score); try{ localStorage.setItem('kg_scores',JSON.stringify(b.slice(0,50))); }catch{} renderBoard(); }
+function renderBoard(){ const b=loadBoard().slice(0,5); $('#board').innerHTML = b.length ? b.map((r,i)=>`<div class="row" style="animation-delay:${i*.07}s"><span class="n">${i+1}</span><div class="who"><b>${esc(r.name)}</b><span>${esc(r.song)}</span></div><span class="pts">${r.score}</span></div>`).join('') : '<div class="empty">Ninguém cantou ainda. Seja o primeiro a subir no palco!</div>'; }
+
+/* ===================== voice capture (mic → AudioWorklet → main thread) ===================== */
+// The worklet only slices the mic stream into overlapping frames; all analysis runs on the
+// main thread in the message handler, which keeps working when the tab is in the background
+// (e.g. singer opened the video on YouTube) because messages are not timer-throttled.
+const FRAME=2048, HOP=1024;
+const VOICE = { stream:null, src:null, tap:null, sink:null, analyser:null, frames:[], noise:[], gate:.01, calibrating:false, recording:false, n:0, sr:48000, live:null, raf:0 };
+const TAP_SRC = `class Tap extends AudioWorkletProcessor{
+  constructor(){ super(); this.N=${FRAME}; this.H=${HOP}; this.ring=new Float32Array(this.N); this.w=0; this.since=0; }
+  process(inputs){
+    const ch=inputs[0]&&inputs[0][0]; if(!ch) return true;
+    for(let i=0;i<ch.length;i++){ this.ring[this.w]=ch[i]; this.w=(this.w+1)%this.N; }
+    this.since+=ch.length;
+    if(this.since>=this.H){ this.since-=this.H; const out=new Float32Array(this.N); out.set(this.ring.subarray(this.w)); out.set(this.ring.subarray(0,this.w),this.N-this.w); this.port.postMessage(out,[out.buffer]); }
+    return true;
+  }
+}
+registerProcessor('voice-tap', Tap);`;
+
+async function startVoice(){
+  stopVoice();
+  setMic('pedindo acesso…','warn');
+  try{
+    if(!navigator.mediaDevices?.getUserMedia || !ac?.audioWorklet) throw new Error('sem suporte');
+    // echoCancellation tries to subtract the playback coming out of the speakers; AGC off so loudness is real.
+    VOICE.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:false, autoGainControl:false, channelCount:1 } });
+    if(!ac.__tap){ await ac.audioWorklet.addModule(URL.createObjectURL(new Blob([TAP_SRC],{type:'application/javascript'}))); ac.__tap=true; }
+    VOICE.sr = ac.sampleRate;
+    VOICE.src = ac.createMediaStreamSource(VOICE.stream);
+    VOICE.tap = new AudioWorkletNode(ac,'voice-tap');
+    VOICE.sink = ac.createGain(); VOICE.sink.gain.value = 0;            // pull the graph without making sound
+    VOICE.analyser = ac.createAnalyser(); VOICE.analyser.fftSize = 256; VOICE.analyser.smoothingTimeConstant = .6;
+    VOICE.src.connect(VOICE.tap).connect(VOICE.sink).connect(ac.destination);
+    VOICE.src.connect(VOICE.analyser);
+    VOICE.tap.port.onmessage = e => onFrame(e.data);
+    VOICE.frames=[]; VOICE.n=0; VOICE.live=null;
+    setMic('ligado','');
+    $('#eq').classList.add('mic-live');
+    try{ drawLive(); }catch(err){ console.warn('[trace]', err); }
+    return true;
+  }catch(err){
+    console.warn('[mic]', err);
+    setMic(err.name==='NotAllowedError'?'bloqueado':'indisponível','err');
+    return false;
+  }
+}
+function beginRecording(){
+  if(!VOICE.stream) return;
+  VOICE.calibrating=false;
+  // noise gate = a few times the room level heard during the 3-2-1 countdown
+  const sorted=VOICE.noise.slice().sort((a,b)=>a-b), med=sorted.length?sorted[sorted.length>>1]:0;
+  VOICE.gate = Math.max(.006, med*3);
+  VOICE.frames=[]; VOICE.n=0; VOICE.recording=true;
+}
+function stopVoice(){
+  const had = VOICE.recording && VOICE.frames.length ? { frames:VOICE.frames, hopSec:HOP/VOICE.sr } : null;
+  VOICE.recording=false; VOICE.calibrating=false;
+  cancelAnimationFrame(VOICE.raf);
+  try{ VOICE.tap && (VOICE.tap.port.onmessage=null, VOICE.tap.disconnect()); VOICE.src && VOICE.src.disconnect(); VOICE.sink && VOICE.sink.disconnect(); }catch{}
+  if(VOICE.stream) VOICE.stream.getTracks().forEach(t=>t.stop());
+  Object.assign(VOICE,{ stream:null, src:null, tap:null, sink:null, analyser:null });
+  $('#eq').classList.remove('mic-live'); $('#eq').querySelectorAll('b').forEach(b=>b.style.transform='');
+  setMic('desligado','warn');
+  return had;
+}
+function setMic(text, cls){ const m=$('#v-mic'); if(m){ m.textContent=text; m.className=cls||''; } }
+
+function onFrame(buf){
+  let s=0; for(let i=0;i<buf.length;i++) s+=buf[i]*buf[i];
+  const rms=Math.sqrt(s/buf.length);
+  if(VOICE.calibrating){ VOICE.noise.push(rms); return; }
+  let f0=null, clarity=0;
+  if(rms>VOICE.gate){ const p=yin(buf,VOICE.sr); if(p && p.clarity>=.8){ f0=p.f; clarity=p.clarity; } }
+  VOICE.live={ rms, f0, clarity };
+  if(!VOICE.recording) return;
+  VOICE.frames.push({ t:VOICE.n*HOP/VOICE.sr, rms, f0, clarity });
+  VOICE.n++;
+}
+
+/* live pitch trace + note readout + mic-driven EQ */
+function drawLive(){
+  const cv=$('#v-trace'), ctx=cv.getContext('2d'), dpr=devicePixelRatio||1;
+  const bars=[...$('#eq').querySelectorAll('b')], bins=new Uint8Array(128);
+  let center=60;
+  (function f(){
+    VOICE.raf=requestAnimationFrame(f);
+    const W=cv.clientWidth, H=cv.clientHeight; if(!W) return;
+    if(cv.width!==Math.round(W*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+    const fr=VOICE.frames, now=fr.length?fr[fr.length-1].t:0, span=8, t0=now-span;
+    let i=Math.max(0,fr.length-1); while(i>0 && fr[i-1].t>=t0) i--;
+    const recent=[]; for(let k=Math.max(0,fr.length-190);k<fr.length;k++) if(fr[k].f0) recent.push(hzToMidi(fr[k].f0));
+    if(recent.length>8){ recent.sort((a,b)=>a-b); center += (recent[recent.length>>1]-center)*.05; }
+    const lo=center-9, hi=center+9, y=m=>H-(m-lo)/(hi-lo)*H;
+    ctx.lineWidth=1;
+    for(let m=Math.ceil(lo); m<=hi; m++){ ctx.strokeStyle= m%12===0 ? 'rgba(43,35,64,.35)' : 'rgba(43,35,64,.08)'; ctx.beginPath(); ctx.moveTo(0,y(m)); ctx.lineTo(W,y(m)); ctx.stroke(); if(m%12===0){ ctx.fillStyle='rgba(43,35,64,.5)'; ctx.font='800 10px Nunito,sans-serif'; ctx.fillText(noteName(m),4,y(m)-3); } }
+    for(; i<fr.length; i++){ const p=fr[i]; if(!p.f0) continue; const m=hzToMidi(p.f0), c=Math.abs(centsOff(m));
+      ctx.fillStyle= c<15 ? '#2ec489' : c<30 ? '#ff9b54' : '#ff5d7a';
+      ctx.beginPath(); ctx.arc((p.t-t0)/span*W, y(m), 2.6, 0, 7); ctx.fill(); }
+    const L=VOICE.live, note=$('#v-note'), cents=$('#v-cents');
+    if(L && L.f0){ const m=hzToMidi(L.f0), c=Math.round(centsOff(m)); note.textContent=noteName(Math.round(m)); cents.innerHTML=`<span class="${Math.abs(c)<15?'ok':Math.abs(c)<30?'meh':'off'}">${c>0?'+':''}${c}¢</span>`; }
+    else { note.textContent='–'; cents.textContent = VOICE.recording ? 'silêncio' : VOICE.calibrating ? 'medindo o ambiente…' : 'aguardando voz'; }
+    const voiced=fr.reduce((a,p)=>a+(p.f0?1:0),0)*HOP/VOICE.sr; $('#v-sung').textContent=`cantando: ${Math.round(voiced)}s`;
+    if(VOICE.analyser && bars.length){ VOICE.analyser.getByteFrequencyData(bins); bars.forEach((b,k)=>{ const v=bins[2+k*2]/255; b.style.transform=`scaleY(${(.1+v*.9).toFixed(3)})`; }); }
+  })();
+}
+
+/* ===== voice-core:begin — pure functions, no DOM (also loaded by the node test harness) ===== */
+const NOTE_PT=['Dó','Dó#','Ré','Ré#','Mi','Fá','Fá#','Sol','Sol#','Lá','Lá#','Si'];
+function hzToMidi(f){ return 69+12*Math.log2(f/440); }
+function centsOff(m){ return (m-Math.round(m))*100; }
+function noteName(m){ m=Math.round(m); return NOTE_PT[((m%12)+12)%12]+(Math.floor(m/12)-1); }
+const clamp01 = x => Math.max(0, Math.min(1, x));
+function median(a){ if(!a.length) return NaN; const s=a.slice().sort((x,y)=>x-y), h=s.length>>1; return s.length%2?s[h]:(s[h-1]+s[h])/2; }
+function pct(a,p){ const s=a.slice().sort((x,y)=>x-y); return s[Math.min(s.length-1,Math.max(0,Math.round(p*(s.length-1))))]; }
+
+// YIN pitch detector (de Cheveigné & Kawahara, 2002), limited to the singing range 70–1100 Hz.
+function yin(buf, sr){
+  const W=buf.length>>1, tMin=Math.max(2,Math.floor(sr/1100)), tMax=Math.min(W-2,Math.ceil(sr/70));
+  const d=new Float32Array(tMax+2);
+  for(let t=1;t<=tMax+1;t++){ let s=0; for(let i=0;i<W;i++){ const x=buf[i]-buf[i+t]; s+=x*x; } d[t]=s; }
+  let run=0; d[0]=1;
+  for(let t=1;t<=tMax+1;t++){ run+=d[t]; d[t]= run>0 ? d[t]*t/run : 1; }
+  let tau=-1;
+  for(let t=tMin;t<=tMax;t++){ if(d[t]<.15){ while(t+1<=tMax && d[t+1]<d[t]) t++; tau=t; break; } }
+  if(tau<0) return null;
+  const a=d[tau-1], b=d[tau], c=d[tau+1], den=a+c-2*b, shift= den>0 ? (a-c)/(2*den) : 0;
+  return { f: sr/(tau+shift), clarity: 1-b };
+}
+
+const KEY_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
+const KEY_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+function corr(x,y){ const n=x.length, mx=x.reduce((a,b)=>a+b)/n, my=y.reduce((a,b)=>a+b)/n; let s=0,sx=0,sy=0; for(let i=0;i<n;i++){ s+=(x[i]-mx)*(y[i]-my); sx+=(x[i]-mx)**2; sy+=(y[i]-my)**2; } return sx&&sy ? s/Math.sqrt(sx*sy) : 0; }
+// Krumhansl–Schmuckler key estimate from a duration-weighted pitch-class histogram.
+function detectKey(hist){
+  let best={ r:-2 };
+  for(let k=0;k<12;k++) for(const [mode,prof] of [['maior',KEY_MAJ],['menor',KEY_MIN]]){
+    const rot=prof.map((_,i)=>prof[(i-k+12)%12]); const r=corr(hist,rot);
+    if(r>best.r) best={ r, tonic:k, mode };
+  }
+  const steps = best.mode==='maior' ? [0,2,4,5,7,9,11] : [0,2,3,5,7,8,10,11];   // minor allows the raised 7th
+  return { ...best, name: NOTE_PT[best.tonic]+' '+best.mode, scale: new Set(steps.map(s=>(s+best.tonic)%12)) };
+}
+
+// frames: [{t, rms, f0|null, clarity}] at hopSec spacing → scores 0–100 + stats for the laudo / AI judge.
+function analyzeTake(frames, hopSec){
+  const warnings=[];
+  const voiced=frames.filter(f=>f.f0);
+  const voicedSec=voiced.length*hopSec;
+
+  // 1) split the pitch track into sustained notes (≥ ~130 ms of steady pitch)
+  const minLen=Math.max(3,Math.round(.13/hopSec)), notes=[]; let cur=[];
+  const flush=()=>{ if(cur.length>=minLen){
+      const ms=cur.map(x=>x.m), med=median(ms);
+      const sm=ms.map((_,i)=>{ const w=ms.slice(Math.max(0,i-2),i+3); return w.reduce((a,b)=>a+b)/w.length; });   // ~100 ms smoothing hides vibrato
+      const jitter=Math.sqrt(sm.reduce((a,v)=>a+(v-med)**2,0)/sm.length)*100;
+      notes.push({ med, dur:cur.length*hopSec, jitter });
+    } cur=[]; };
+  for(const f of frames){
+    if(!f.f0){ flush(); continue; }
+    const m=hzToMidi(f.f0);
+    if(cur.length && Math.abs(m-median(cur.slice(-5).map(x=>x.m)))>.6) flush();
+    cur.push({ m });
+  }
+  flush();
+  const totalDur=notes.reduce((a,n)=>a+n.dur,0);
+
+  // 2) tuning reference: the singer (and many playbacks) may sit slightly off A440, so measure
+  //    accuracy against the singer's own average tuning, not the absolute grid.
+  let offset=0, meanAbsCents=null, offScale=null, key=null;
+  if(notes.length>=3){
+    let sx=0, sy=0; notes.forEach(n=>{ const a=2*Math.PI*(n.med-Math.floor(n.med)); sx+=n.dur*Math.cos(a); sy+=n.dur*Math.sin(a); });
+    offset=Math.atan2(sy,sx)/(2*Math.PI);
+    const hist=new Array(12).fill(0);
+    let dev=0; notes.forEach(n=>{ const x=n.med-offset, r=Math.round(x); dev+=n.dur*Math.abs(x-r)*100; hist[((r%12)+12)%12]+=n.dur; });
+    meanAbsCents=dev/totalDur;
+    key=detectKey(hist);
+    offScale=notes.reduce((a,n)=>a+(key.scale.has(((Math.round(n.med-offset)%12)+12)%12)?0:n.dur),0)/totalDur;
+  }
+  const meanJitter = notes.length ? notes.reduce((a,n)=>a+n.jitter*n.dur,0)/totalDur : null;
+
+  // 3) category scores (calibration constants documented in the POC report)
+  const afinacao = meanAbsCents==null ? 0 : clamp01((28-meanAbsCents)/20) * (1-Math.max(0,offScale-.08));
+  const estabilidade = meanJitter==null ? 0 : clamp01((32-meanJitter)/26);
+  let energia=0;
+  if(voiced.length>=10){
+    const db=voiced.map(f=>20*Math.log10(f.rms)), range=pct(db,.9)-pct(db,.1);
+    const clar=voiced.reduce((a,f)=>a+f.clarity,0)/voiced.length;
+    energia = .5*clamp01((range-3)/9) + .5*clamp01((clar-.82)/.14);
+  }
+  let presenca=0;
+  if(voiced.length>1){
+    const span=voiced[voiced.length-1].t-voiced[0].t+hopSec;
+    presenca = clamp01((voicedSec/span)/.55) * clamp01(voicedSec/20);
+  }
+  const raw = .45*afinacao + .20*estabilidade + .15*energia + .20*presenca;
+  const final = Math.round(45 + 55*raw);   // karaoke curve: nobody leaves the church with less than 45
+
+  if(voicedSec<5) warnings.push('Quase não ouvi sua voz. Confira se o microfone certo está selecionado e cante mais perto dele.');
+  else if(notes.length<3) warnings.push('Ouvi pouca nota sustentada. A afinação ficou sem base para medir.');
+
+  const ns=notes.map(n=>n.med);
+  return {
+    final, raw:Math.round(raw*100),
+    cats:{ afinacao:Math.round(afinacao*100), estabilidade:Math.round(estabilidade*100), energia:Math.round(energia*100), presenca:Math.round(presenca*100) },
+    stats:{
+      voicedSec:Math.round(voicedSec), noteCount:notes.length,
+      meanAbsCents: meanAbsCents==null?null:Math.round(meanAbsCents),
+      meanJitterCents: meanJitter==null?null:Math.round(meanJitter),
+      tuningOffsetCents: Math.round(offset*100),
+      offScalePct: offScale==null?null:Math.round(offScale*100),
+      key: key?key.name:null,
+      low: ns.length>=3?noteName(pct(ns,.05)):null, high: ns.length>=3?noteName(pct(ns,.95)):null
+    },
+    warnings
+  };
+}
+/* ===== voice-core:end ===== */
+
+/* ===================== AI judge (Claude) ===================== */
+// Optional. Claude only sees the numbers measured above (never audio) and turns them into
+// a verdict + one coaching tip in pt-BR. Called from the browser with the user's own key,
+// which is acceptable for a local POC only; production should proxy through a backend.
+const JUDGE_SCHEMA = {
+  type:'object',
+  properties:{
+    titulo:{ type:'string', description:'Veredito curto, 2 a 4 palavras' },
+    comentario:{ type:'string', description:'1 ou 2 frases sobre a apresentação, baseadas nas medições' },
+    dica:{ type:'string', description:'Uma dica prática de canto ligada ao ponto mais fraco' }
+  },
+  required:['titulo','comentario','dica'],
+  additionalProperties:false
+};
+const JUDGE_SYSTEM = `Você é o jurado de um karaokê de louvor numa igreja brasileira. Você recebe medições objetivas da voz de quem cantou (não o áudio) e escreve o veredito em português do Brasil.
+Tom: caloroso, bem-humorado, encorajador, nunca humilhante; pode brincar com o contexto de igreja com respeito.
+Regras: baseie-se apenas nos números recebidos e não invente nada que eles não mostrem. Cite no máximo um número. Se houver avisos de captação (pouca voz ouvida), diga isso com leveza em vez de criticar o canto. A dica deve atacar a categoria mais baixa com um exercício concreto.
+Como ler as medições: desvio_medio_cents é a distância média das notas sustentadas até a nota certa (abaixo de 12 é excelente, acima de 25 é bem desafinado); oscilacao_cents mede o quanto a nota treme dentro da sustentação; fora_do_tom_pct é a fração do tempo em notas fora da escala do tom detectado.`;
+let anthropicMod=null;
+async function aiJudge(r){
+  anthropicMod = anthropicMod || await import('https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.129.0/+esm');
+  const Anthropic = anthropicMod.default;
+  const client = new Anthropic({ apiKey: state.aiKey, dangerouslyAllowBrowser: true, maxRetries: 1, timeout: 30000 });
+  const payload = {
+    cantor: state.singer, musica: state.current?.title, nota_final: r.final,
+    categorias: r.cats, tom_detectado: r.stats.key, extensao: r.stats.low && `${r.stats.low} até ${r.stats.high}`,
+    segundos_cantando: r.stats.voicedSec, notas_sustentadas: r.stats.noteCount,
+    desvio_medio_cents: r.stats.meanAbsCents, oscilacao_cents: r.stats.meanJitterCents,
+    fora_do_tom_pct: r.stats.offScalePct, avisos: r.warnings
+  };
+  const res = await client.beta.messages.create({
+    model: 'claude-opus-5-5',
+    max_tokens: 4000,
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
+    output_config: { effort: 'low', format: { type: 'json_schema', schema: JUDGE_SCHEMA } },
+    system: JUDGE_SYSTEM,
+    messages: [{ role: 'user', content: JSON.stringify(payload) }]
+  });
+  if(res.stop_reason !== 'end_turn') throw new Error('stop_reason ' + res.stop_reason);
+  const text = res.content.find(b=>b.type==='text')?.text;
+  return JSON.parse(text);
+}
+
+/* ===================== audio (synth) ===================== */
+let ac=null, drumNode=null;
+function ensureAudio(){ try{ if(!ac){ ac=new (window.AudioContext||window.webkitAudioContext)(); } if(ac.state==='suspended') ac.resume(); }catch{} }
+function beep(f){ if(!ac) return; const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(.0001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.25,ac.currentTime+.01); g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.35); o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+.4); }
+function drumroll(ms){
+  if(!ac) return; stopDrum();
+  const len=ac.sampleRate*2, buf=ac.createBuffer(1,len,ac.sampleRate), d=buf.getChannelData(0); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
+  const g=ac.createGain(); g.gain.value=.9; const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=900; g.connect(lp).connect(ac.destination);
+  const t0=ac.currentTime, end=t0+ms/1000; let t=t0;
+  while(t<end){ const p=(t-t0)/(ms/1000); const src=ac.createBufferSource(); src.buffer=buf; src.playbackRate.value=6+p*6; const gg=ac.createGain(); gg.gain.value=.25+p*.75; src.connect(gg).connect(g); src.start(t); src.stop(t+.12); t+= (0.11-0.085*p); }
+  drumNode=g;
+}
+function stopDrum(){ if(drumNode){ try{ drumNode.gain.setTargetAtTime(0,ac.currentTime,.03); const n=drumNode; setTimeout(()=>{try{n.disconnect()}catch{}},300);}catch{} drumNode=null; } }
+function fanfare(score){
+  if(!ac) return; const t=ac.currentTime;
+  const chord = score>=70 ? [523.25,659.25,783.99,1046.5] : [523.25,622.25,783.99,932.33];
+  chord.forEach((f,i)=>{ const o=ac.createOscillator(), g=ac.createGain(); o.type= i===3?'triangle':'sawtooth'; o.frequency.value=f; g.gain.setValueAtTime(.0001,t+i*.07); g.gain.exponentialRampToValueAtTime(.18,t+i*.07+.03); g.gain.exponentialRampToValueAtTime(.0001,t+1.9); const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(600,t); lp.frequency.exponentialRampToValueAtTime(5000,t+.4); o.connect(lp).connect(g).connect(ac.destination); o.start(t+i*.07); o.stop(t+2); });
+}
+
+/* ===================== confetti ===================== */
+function confetti(count){
+  const cv=$('#confetti'), ctx=cv.getContext('2d'); cv.width=innerWidth*devicePixelRatio; cv.height=innerHeight*devicePixelRatio; ctx.scale(devicePixelRatio,devicePixelRatio);
+  const ps=Array.from({length:count},()=>({ x:innerWidth/2+(Math.random()-.5)*120, y:innerHeight*.4, vx:(Math.random()-.5)*18, vy:-Math.random()*16-6, g:.35+Math.random()*.2, r:Math.random()*Math.PI, vr:(Math.random()-.5)*.3, w:7+Math.random()*9, h:5+Math.random()*7, c:FILLS[Math.random()*FILLS.length|0], a:1 }));
+  const t0=performance.now();
+  (function f(now){ const t=(now-t0)/1000; ctx.clearRect(0,0,innerWidth,innerHeight);
+    ps.forEach(p=>{ p.vy+=p.g; p.vx*=.99; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr; if(t>2.2) p.a=Math.max(0,p.a-.03); ctx.save(); ctx.globalAlpha=p.a; ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.fillStyle=p.c; ctx.strokeStyle='#2b2340'; ctx.lineWidth=1.2; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.strokeRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore(); });
+    if(t<3.4) requestAnimationFrame(f); else ctx.clearRect(0,0,innerWidth,innerHeight); })(t0);
+}
+</script>
+</body>
+</html>
+
+</body></html>
